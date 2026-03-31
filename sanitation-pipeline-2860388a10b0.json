@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "sanitation-pipeline",
+  "private_key_id": "2860388a10b0a99d9c4e4fe940140473eefaa2ac",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDYr/Gzb/Wc+Zlv\nwkmZTXo6u4j8IGDZEOVQ+a9MwBqP+7iZyuhumfv8//gGJ5Y2lm6yrCYLRqyhPMtq\n0XOLf7MD7X6KsAKl2PHwGbImTFEVWRtKpoiEEjA7TrSvKIcTJK+JgVf3wtfNcbSc\nrgs0MzQ3mXTQNG35UfgA/OzyrO/L+KLk/gWfXvsA46yQTTSKZrl7eSiiNa8N724l\nM5vVPfFkgw4dM1zLd2JS6zZRGfdKcRQSzUNI/b91m1BYK092SX5gSKj0P/wdt422\nHnvg6r2OrrRuOOPoyCY4KQ1byzAFRwqUy+PAhLEcaoMsSoRvDCRyjaEPYW9lNNUb\nYs7tenj1AgMBAAECggEAIzXB02vFsCaB135tWa8Uhb8r9PYo7pS3goc0BEdx+YQI\nfNsTFkfIwdVxHsTnfILIxZlCDFKFYiTgFAEpYplTRDfe+Fe98meUdrSiNWVwxoSG\ncgSqCbXv5u803oJ6InLzYCdnnS+ow+4uUEhaszZ/zWoO6HcgiKMYZsaylQNjatP1\nREXABUmSpzeLqgNnb8DTTTTN31QfPXgl8DCPKGtM4af72pp8uL9dDvGJ+KT8Nztn\nJfl3DUZ/62MDlVUX6zK8SdfqN0By0LoYj92llbJhcQ7h3o5vk+aKNBQcwMsasVGx\ntAtQq8SJnAP864cCHFk+cLinpksdoyZ3P+yZtZ9w8QKBgQDzhryXSNX/qjW8ffxB\nzxBxxJuBRJ/W/mPAcVfwdXICoY/T12dUKXYSxdxD0bJJFLEIb3HsrnmRJuoaUeeV\nF56eSBfjfDgZbUSBX7Lwuk/s87GaDJ5l5HFic0ZUK7M8ufvM0DKotr9kZyIfsVLk\nHpCQ9bG/dbc1jCHr0nHpb3aOMQKBgQDjyUcmvHimB0FG90zqsurAUYgmeEyQj04O\nXkjPsSiRE1pFifhasntjAN8D2X/IgPEtte+4TiqbH7Dq0kT41bTGGy2y7LICehlK\na3xINhSyUUO4WDucs3M06C+J8m4nzDUFwDLtKTiWveLwQPr24I2uyP60iK5L2NGo\nvHWPUv5SBQKBgQDw1+1GNXuneX/hpjvIHfAmhApDQ0pNh5PB7JbLMmwKHByxpxQD\nEWo70MExtX78deFL9WQXbsq9+l2GoEBHnG98HNK7YcvdocohpTLEj46iSrT4JMi2\n/sIAWv9QGVQPl+Rmv/WKFAqfUrxV2bqf73aMVuFu+A20gJ2/q4aLFniK0QKBgALP\n1EIFJ5QdGNAwc1GeXcl7+CtJZuCN9E+3GD0AGdkYnQ+osVklROKm+xnIEIzAEroW\nudvTkzERBhUP/Wv4719WrIy94UCokzFY/FLD4COHX0eiRzIbAPwRNa0FQhjZq3nj\nsn08+gbaVzfSBYcQpI8YyhQeb9Bd39CuauEXDC6lAoGAXyAjBdWoopTALb1IqBF7\ndsg6mrj6BQ/gKCRAP5Ao9s00fSuoa4UYUzr0RnOlNFtJaFaNM/vAVKYpu31rMWwE\nthcBbPhNVV1Evx1eKe7/5F1tPOD5pKx/pLNRC/z3+HwKGZHuPgqoA/KFWrDoidEx\n5DlIAi7Evc7Jxhg8DfG2Po8=\n-----END PRIVATE KEY-----\n",
+  "client_email": "pipeline-bot@sanitation-pipeline.iam.gserviceaccount.com",
+  "client_id": "107701175343612354403",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/pipeline-bot%40sanitation-pipeline.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
