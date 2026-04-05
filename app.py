@@ -3,7 +3,7 @@ import sys
 import re
 import calendar
 from pathlib import Path
-from datetime import date, timedelta
+from datetime import date
 
 import pandas as pd
 import streamlit as st
@@ -13,9 +13,14 @@ sys.path.insert(0, str(ROOT))
 
 from src import charts, cleaner, fetcher
 
-# --------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────
+# CONTRACT CONSTANT
+# ──────────────────────────────────────────────────────────────
+CONTRACT_TOTAL_RM = 201_730.54   # Total pipe to install across full contract
+
+# ──────────────────────────────────────────────────────────────
 # 1. PAGE CONFIG
-# --------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────
 
 st.set_page_config(
     page_title="CCECC Project Tracker - Dhaka",
@@ -24,9 +29,9 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# --------------------------------------------------------------
-# 2. CSS  (no Google Fonts import — uses system fonts reliably)
-# --------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────
+# 2. CSS
+# ──────────────────────────────────────────────────────────────
 
 st.markdown("""
 <style>
@@ -35,7 +40,7 @@ html, body, [class*="css"] {
     background-color: #0B0D14;
     color: #D1D5E8;
 }
-.block-container { padding: 3rem 2rem 2rem 2rem; }
+.block-container { padding: 4rem 2rem 2rem 2rem !important; }
 
 .kpi-card {
     background: linear-gradient(135deg, rgba(0,229,255,0.06), rgba(0,0,0,0));
@@ -54,6 +59,23 @@ html, body, [class*="css"] {
     height: 2px;
     background: linear-gradient(90deg, #00E5FF, transparent);
 }
+.kpi-card-contract {
+    background: linear-gradient(135deg, rgba(168,255,62,0.08), rgba(0,0,0,0));
+    border: 1px solid rgba(168,255,62,0.25);
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+.kpi-card-contract::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #A8FF3E, transparent);
+}
 .kpi-label {
     font-size: 0.62rem;
     letter-spacing: 0.1em;
@@ -67,7 +89,13 @@ html, body, [class*="css"] {
     color: #00E5FF;
     line-height: 1.1;
 }
-.kpi-sub { font-size: 0.68rem; color: #4B5A78; margin-top: 0.2rem; }
+.kpi-value-contract {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #A8FF3E;
+    line-height: 1.1;
+}
+.kpi-sub  { font-size: 0.68rem; color: #4B5A78; margin-top: 0.2rem; }
 .kpi-warn  { color: #FF6B35; }
 .kpi-good  { color: #A8FF3E; }
 .kpi-amber { color: #FFD166; }
@@ -90,16 +118,15 @@ hr { border-color: rgba(255,255,255,0.06); }
 </style>
 """, unsafe_allow_html=True)
 
-# --------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────
 # 3. SIDEBAR
-# --------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────
 
 MONTH_TABS = {
     "March 2026"   : "Summary (Mar26) ",
     "February 2026": "Summary (Feb26) ",
     "January 2026" : "Summary (Jan26) ",
 }
-
 MANPOWER_TABS = {
     "March 2026"   : "Manpower (Mar26)",
     "February 2026": "Manpower (Feb26)",
@@ -149,8 +176,8 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("**Activity Filter**")
     activity_filter = st.selectbox(
-        "Burn-Rate Activity",
-        options=["Pipe", "Road Cutting", "Service Pit", "Excavation"],
+        "Burn-Rate / Daily Progress Activity",
+        options=["Pipe", "Road Cutting", "Service Pit"],
         index=0,
     )
 
@@ -166,14 +193,14 @@ with st.sidebar:
 
     st.markdown("---")
     st.caption(
-        f"Spreadsheet: Master Tracker\n\n"
+        f"Contract Total: **{CONTRACT_TOTAL_RM:,.2f} rm**\n\n"
         f"Viewing: **{summary_tab.strip()}**\n\n"
         f"Cache TTL: 10 min"
     )
 
-# --------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────
 # 4. FETCH AND CLEAN
-# --------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────
 
 with st.spinner(f"Loading {summary_tab.strip()}..."):
     raw_summary  = fetcher.fetch_sheet_by_name(summary_tab)
@@ -184,9 +211,9 @@ vehicle_df  = cleaner.clean_vehicle_usage(raw_summary,  sheet_name=summary_tab)
 manpower_df = cleaner.clean_manpower_sheet(raw_manpower, sheet_name=manpower_tab)
 kpis        = cleaner.compute_kpis(summary_df, filter_start, filter_end)
 
-# --------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────
 # 5. HEADER
-# --------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────
 
 st.markdown(f"""
 <div style="margin-bottom:1.2rem;">
@@ -194,7 +221,8 @@ st.markdown(f"""
         CCECC-HONESS-SMEDI JV
     </p>
     <p style="font-size:0.85rem; color:#3D5A80; margin:0.15rem 0 0.3rem 0;">
-        WD5B &nbsp;|&nbsp; Zone W3 &amp; W4 &nbsp;|&nbsp; DWASA Sanitation Network &nbsp;|&nbsp; Package WD5B
+        WD5B &nbsp;|&nbsp; Zone W3 &amp; W4 &nbsp;|&nbsp;
+        DWASA Sanitation Network &nbsp;|&nbsp; Package WD5B
     </p>
     <p style="font-size:0.92rem; color:#5A7FAA; margin:0;">
         {selected_month_label} &nbsp;|&nbsp;
@@ -204,38 +232,72 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# --------------------------------------------------------------
-# 6. KPI CARDS
-# --------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────
+# 6. KPI CARDS — Row 1: Monthly KPIs
+# ──────────────────────────────────────────────────────────────
 
-st.markdown('<div class="section-title">Key Performance Indicators</div>', unsafe_allow_html=True)
+pipe_rm       = kpis.get("total_pipe_installed_rm", 0.0)
+pipe_upto_feb = kpis.get("total_pipe_upto_feb",     0.0)
+excav_rm      = kpis.get("total_excavation_rm",      0.0)
+pits          = kpis.get("total_service_pits",        0.0)
+active_days   = kpis.get("active_days",               0)
+pct_target    = kpis.get("pct_of_monthly_target",     0.0)
+monthly_tgt   = kpis.get("monthly_target_rm",         0.0)
+
+# Contract-level totals
+total_installed_all = pipe_upto_feb + pipe_rm
+pct_contract        = round(total_installed_all / CONTRACT_TOTAL_RM * 100, 2) if CONTRACT_TOTAL_RM else 0
+contract_remaining  = CONTRACT_TOTAL_RM - total_installed_all
 
 
-def _card(col, label, value, sub="", cls=""):
+def _card(col, label, value, sub="", cls="kpi-value"):
     col.markdown(f"""
     <div class="kpi-card">
         <div class="kpi-label">{label}</div>
-        <div class="kpi-value {cls}">{value}</div>
+        <div class="{cls}">{value}</div>
         <div class="kpi-sub">{sub}</div>
     </div>
     """, unsafe_allow_html=True)
 
 
+def _card_contract(col, label, value, sub=""):
+    col.markdown(f"""
+    <div class="kpi-card-contract">
+        <div class="kpi-label">{label}</div>
+        <div class="kpi-value-contract">{value}</div>
+        <div class="kpi-sub">{sub}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+st.markdown('<div class="section-title">Contract Overview</div>', unsafe_allow_html=True)
+
+c1, c2, c3, c4 = st.columns(4)
+_card_contract(c1, "Contract Total",
+               f"{CONTRACT_TOTAL_RM:,.0f} rm",
+               "Full scope — all months")
+_card_contract(c2, "Total Installed",
+               f"{total_installed_all:,.1f} rm",
+               f"Upto Feb: {pipe_upto_feb:,.0f} + This month: {pipe_rm:,.0f}")
+_card_contract(c3, "Contract Completion",
+               f"{pct_contract:.2f}%",
+               f"{contract_remaining:,.0f} rm remaining")
+_card_contract(c4, "Contract Remaining",
+               f"{contract_remaining:,.0f} rm",
+               f"of {CONTRACT_TOTAL_RM:,.0f} rm total")
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ── Row 2: Monthly KPIs ───────────────────────────────────────
+st.markdown('<div class="section-title">Monthly Performance Indicators</div>', unsafe_allow_html=True)
+
+pct_cls = "kpi-value kpi-good" if pct_target >= 90 else "kpi-value kpi-amber" if pct_target >= 60 else "kpi-value kpi-warn"
+
 k1, k2, k3, k4, k5, k6 = st.columns(6)
-
-pipe_rm       = kpis.get("total_pipe_installed_rm", 0.0)
-pipe_upto_feb = kpis.get("total_pipe_upto_feb", 0.0)
-excav_rm      = kpis.get("total_excavation_rm", 0.0)
-pits          = kpis.get("total_service_pits", 0.0)
-active_days   = kpis.get("active_days", 0)
-pct_target    = kpis.get("pct_of_monthly_target", 0.0)
-monthly_tgt   = kpis.get("monthly_target_rm", 0.0)
-
-pct_cls = "kpi-good" if pct_target >= 90 else "kpi-amber" if pct_target >= 60 else "kpi-warn"
 
 _card(k1, "Pipe Installed",
       f"{pipe_rm:,.1f} rm",
-      f"Target: {monthly_tgt:,.0f} rm")
+      f"Monthly target: {monthly_tgt:,.0f} rm")
 
 _card(k2, "vs Monthly Target",
       f"{pct_target:.1f}%",
@@ -254,13 +316,13 @@ _card(k5, "Active Days",
       str(active_days),
       f"of {day_range[1] - day_range[0] + 1} selected")
 
-# Manpower KPI — sum individual role counts for latest date (Day shift only)
+# Manpower KPI
 if not manpower_df.empty:
     latest_mp_date = manpower_df.loc[
         manpower_df["Date"] <= filter_end, "Date"
     ].max()
     if pd.notna(latest_mp_date):
-        day_mask = (manpower_df["Date"] == latest_mp_date)
+        day_mask  = (manpower_df["Date"] == latest_mp_date)
         if "Shift" in manpower_df.columns:
             day_mask = day_mask & (manpower_df["Shift"] == "Day")
         latest_mp = manpower_df.loc[day_mask, "Count"].sum()
@@ -274,15 +336,29 @@ else:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --------------------------------------------------------------
-# 7. ROW 1 — Burn Rate + Gauge
-# --------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────
+# 7. CONTRACT PROGRESS BAR
+# ──────────────────────────────────────────────────────────────
 
-st.markdown('<div class="section-title">Progress Analysis</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">Contract Progress — Total Pipe Installation</div>',
+            unsafe_allow_html=True)
 
-col_chart, col_gauge = st.columns([3, 1], gap="medium")
+fig_contract = charts.contract_progress_chart(
+    pipe_upto_feb   = pipe_upto_feb,
+    pipe_this_month = pipe_rm,
+    contract_total  = CONTRACT_TOTAL_RM,
+)
+st.plotly_chart(fig_contract, use_container_width=True)
 
-with col_chart:
+# ──────────────────────────────────────────────────────────────
+# 8. BURN RATE + GAUGE
+# ──────────────────────────────────────────────────────────────
+
+st.markdown('<div class="section-title">Monthly Burn Rate Analysis</div>', unsafe_allow_html=True)
+
+col_burn, col_gauge = st.columns([3, 1], gap="medium")
+
+with col_burn:
     fig_burn = charts.burn_rate_chart(
         summary_df, filter_start, filter_end,
         activity_filter=activity_filter,
@@ -299,24 +375,36 @@ with col_gauge:
     if monthly_tgt > 0:
         remaining = monthly_tgt - pipe_rm
         st.markdown(
-            f"<p style='text-align:center; color:#3D5A80; font-size:0.72rem; margin-top:-0.5rem;'>"
-            f"<strong style='color:#A0A8C0;'>{remaining:,.1f} rm</strong> remaining"
+            f"<p style='text-align:center;color:#3D5A80;font-size:0.72rem;margin-top:-0.5rem;'>"
+            f"<strong style='color:#A0A8C0;'>{remaining:,.1f} rm</strong> remaining this month"
             f"</p>",
             unsafe_allow_html=True,
         )
 
-# --------------------------------------------------------------
-# 8. ROW 2 — Daily Pipe by SD Zone
-# --------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────
+# 9. DAILY PROGRESS BAR CHART  (NEW)
+# ──────────────────────────────────────────────────────────────
 
-st.markdown('<div class="section-title">Daily Pipe Installation by SD Zone</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">Daily Progress</div>', unsafe_allow_html=True)
 
-fig_daily = charts.daily_pipe_installation_chart(summary_df, filter_start, filter_end)
-st.plotly_chart(fig_daily, use_container_width=True)
+fig_daily_prog = charts.daily_progress_bar_chart(
+    summary_df, filter_start, filter_end,
+    activity_filter=activity_filter,
+)
+st.plotly_chart(fig_daily_prog, use_container_width=True)
 
-# --------------------------------------------------------------
-# 9. ROW 3 — Activity Breakdown + Vehicle Usage
-# --------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────
+# 10. DAILY PIPE BY SD ZONE
+# ──────────────────────────────────────────────────────────────
+
+st.markdown('<div class="section-title">Pipe Installation by SD Zone</div>', unsafe_allow_html=True)
+
+fig_sd = charts.daily_pipe_installation_chart(summary_df, filter_start, filter_end)
+st.plotly_chart(fig_sd, use_container_width=True)
+
+# ──────────────────────────────────────────────────────────────
+# 11. ACTIVITY BREAKDOWN + VEHICLE USAGE
+# ──────────────────────────────────────────────────────────────
 
 st.markdown('<div class="section-title">Work Breakdown & Equipment</div>', unsafe_allow_html=True)
 
@@ -330,18 +418,18 @@ with col_veh:
     fig_veh = charts.vehicle_utilisation_chart(vehicle_df, filter_start, filter_end)
     st.plotly_chart(fig_veh, use_container_width=True)
 
-# --------------------------------------------------------------
-# 10. ROW 4 — Manpower
-# --------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────
+# 12. MANPOWER SUMMARY CHART  (NEW)
+# ──────────────────────────────────────────────────────────────
 
-st.markdown('<div class="section-title">Manpower & Headcount</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">Manpower Statistics</div>', unsafe_allow_html=True)
 
-fig_mp = charts.manpower_headcount_chart(manpower_df, filter_start, filter_end)
-st.plotly_chart(fig_mp, use_container_width=True)
+fig_mp_summary = charts.manpower_summary_chart(manpower_df, filter_start, filter_end)
+st.plotly_chart(fig_mp_summary, use_container_width=True)
 
-# --------------------------------------------------------------
-# 11. DATA EXPLORER
-# --------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────
+# 13. DATA EXPLORER
+# ──────────────────────────────────────────────────────────────
 
 with st.expander("Raw Data Explorer", expanded=False):
     tab1, tab2, tab3 = st.tabs(["Work Activities", "Vehicle Usage", "Manpower"])
@@ -380,14 +468,15 @@ with st.expander("Raw Data Explorer", expanded=False):
                 use_container_width=True, hide_index=True,
             )
 
-# --------------------------------------------------------------
-# 12. FOOTER
-# --------------------------------------------------------------
+# ──────────────────────────────────────────────────────────────
+# 14. FOOTER
+# ──────────────────────────────────────────────────────────────
 
 st.markdown("""
 <hr/>
 <p style="text-align:center; color:#1E2A40; font-size:0.68rem; letter-spacing:0.08em;">
     CCECC-HONESS-SMEDI JV &nbsp;|&nbsp; WD5B &nbsp;|&nbsp;
-    DWASA SANITATION NETWORK W3 &amp; W4 &nbsp;|&nbsp; AUTO-REFRESH: 10 MIN
+    DWASA SANITATION NETWORK W3 &amp; W4 &nbsp;|&nbsp;
+    CONTRACT: 201,730.54 rm &nbsp;|&nbsp; AUTO-REFRESH: 10 MIN
 </p>
 """, unsafe_allow_html=True)
