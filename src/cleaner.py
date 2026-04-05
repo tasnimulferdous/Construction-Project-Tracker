@@ -10,8 +10,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# ── Summary sheet column indices (0-based) ───────────────────
-_COL_DAY_START  = 9
+_COL_DAY_START      = 9
 _VEHICLE_DATA_START = 21
 _VEHICLE_DATA_END   = 24
 
@@ -84,18 +83,21 @@ def clean_summary_sheet(
       Rows 1-4 : Metadata
       Row  5   : Headers (index 4)
       Rows 6-18: Work activity data (indices 5-17)
-                 Col A(0)=SN (unreliable - has totals/pct)
-                 Col B(1)=Work Activities (forward-fill downward)
-                 Col C(2)=SD (A/B/D)
-                 Col D(3)=Pipe Dia (DN150/DN200/blank)
-                 Col E(4)=Qty Upto Feb
-                 Col F(5)=Qty Mar (monthly target)
-                 Col G(6)=Sum
-                 Col H(7)=Unit
-                 Col I(8)=blank
-                 Col J-AP (9-39)=Day 1-31
-      Row 20   : blank
-      Row 21+  : Vehicle Usage
+                 Col A(0) = SN — unreliable, skip
+                 Col B(1) = Work Activities — forward-fill, skip numeric/pct
+                 Col C(2) = SD (A/B/D) — forward-fill independently
+                 Col D(3) = Pipe Dia (DN150/DN200/blank)
+                 Col E(4) = Qty Upto Feb
+                 Col F(5) = Qty Mar (monthly target)
+                 Col G(6) = Sum
+                 Col H(7) = Unit
+                 Col I(8) = blank spacer
+                 Col J-AP (9-39) = Day 1-31 daily quantities
+
+    Activity detection logic (pipe_dia is the key signal):
+      - pipe_dia present        → "Pipe Installation"
+      - "Service" in last name  → "Service Pit Installation"
+      - otherwise               → "Road Cutting+Trench excavation"
 
     Returns: Activity | SD | Pipe_Dia | Unit | Day | Date |
              Daily_Qty | Qty_Upto_Feb | Qty_Mar
@@ -110,7 +112,7 @@ def clean_summary_sheet(
     DATA_START = 5
     DATA_END   = 18
 
-    # Forward-fill SD zone (col C) independently — never reset
+    # Forward-fill SD (col C) independently — never reset
     last_sd = ""
     for i in range(DATA_START, min(DATA_END, len(rows))):
         sd_val = str(rows[i][2]).strip()
@@ -118,10 +120,9 @@ def clean_summary_sheet(
             last_sd = sd_val
         rows[i][2] = last_sd
 
-    # Track last explicit activity name from col B
     last_explicit_activity = ""
-
     records = []
+
     for i in range(DATA_START, min(DATA_END, len(rows))):
         row = rows[i]
 
@@ -132,14 +133,11 @@ def clean_summary_sheet(
         qty_upto = _to_float(row[4])
         qty_mar  = _to_float(row[5])
 
-        # Update explicit activity name when col B has a real name
+        # Update explicit activity from col B
         if col_b and not _is_numeric_or_pct(col_b):
             last_explicit_activity = col_b
 
-        # Determine effective activity using pipe_dia as the key signal:
-        #   - Pipe dia present       → Pipe Installation
-        #   - "Service" in last name → Service Pit Installation
-        #   - Otherwise              → Road Cutting+Trench excavation
+        # Determine activity using pipe_dia as the key signal
         if pipe_dia:
             activity = "Pipe Installation"
         elif last_explicit_activity and "Service" in last_explicit_activity:
@@ -149,7 +147,7 @@ def clean_summary_sheet(
 
         if not sd or sd not in ("A", "B", "D"):
             continue
-        if not qty_upto and not qty_mar:
+        if pd.isna(qty_upto) and pd.isna(qty_mar):
             continue
 
         pipe_dia = pipe_dia if pipe_dia else "General"
@@ -196,7 +194,7 @@ def clean_vehicle_usage(
         return pd.DataFrame()
 
     month, year = _extract_month_year(sheet_name)
-    rows = [_pad(r) for r in raw]
+    rows    = [_pad(r) for r in raw]
     records = []
 
     for i in range(_VEHICLE_DATA_START, _VEHICLE_DATA_END + 1):
@@ -236,15 +234,6 @@ def clean_manpower_sheet(
     sheet_name: str = "Manpower (Mar26)",
 ) -> pd.DataFrame:
     """
-    Layout:
-      Rows 1-8 : Logos, metadata, 3 header rows
-      Row 9+   : Data — each date = Day row + Night row
-      Col A(0) = Date "12-Mar-26" (only on Day row)
-      Col B(1) = Shift "Day"/"Night"
-      Col C-P (2-15) = Individual role counts
-      Col Q-U (16-20) = Subtotals/Grand Total — SKIP
-      Last row = "Total" — SKIP
-
     Returns: Date | Shift | Company | Role | Count
     """
     if not raw:
@@ -327,10 +316,8 @@ def compute_kpis(
     date_end: pd.Timestamp,
 ) -> dict[str, Any]:
     """
-    Compute all KPI values from the summary DataFrame.
-
-    Qty_Upto_Feb and Qty_Mar are stored on every daily row (repeated).
-    We deduplicate by Activity+SD+Pipe_Dia before summing targets.
+    Qty_Upto_Feb and Qty_Mar repeat on every daily row.
+    Deduplicate by Activity+SD+Pipe_Dia before summing targets.
     """
     if summary_df.empty:
         return {k: 0 for k in [
@@ -351,15 +338,11 @@ def compute_kpis(
             sub = sub[sub["Unit"].str.contains(unit_kw, case=False, na=False)]
         return float(sub["Daily_Qty"].sum())
 
-    # Deduplicate meta per Activity+SD+Pipe_Dia (values repeat on every day row)
-    meta = summary_df.drop_duplicates(subset=["Activity", "SD", "Pipe_Dia"])
+    meta      = summary_df.drop_duplicates(subset=["Activity", "SD", "Pipe_Dia"])
+    pipe_meta = meta[meta["Activity"].str.contains("Pipe", case=False, na=False)]
 
-    pipe_meta  = meta[meta["Activity"].str.contains("Pipe",        case=False, na=False)]
-    excav_meta = meta[meta["Activity"].str.contains("Road Cutting", case=False, na=False)]
-    pit_meta   = meta[meta["Activity"].str.contains("Service Pit", case=False, na=False)]
-
-    monthly_target = float(pipe_meta["Qty_Mar"].sum())      if not pipe_meta.empty  else 0.0
-    pipe_upto_feb  = float(pipe_meta["Qty_Upto_Feb"].sum()) if not pipe_meta.empty  else 0.0
+    monthly_target = float(pipe_meta["Qty_Mar"].sum())      if not pipe_meta.empty else 0.0
+    pipe_upto_feb  = float(pipe_meta["Qty_Upto_Feb"].sum()) if not pipe_meta.empty else 0.0
 
     pipe_installed = _sum("Pipe",         "rm")
     excav_actual   = _sum("Road Cutting", "rm")
@@ -374,4 +357,129 @@ def compute_kpis(
         "active_days"            : int(df["Date"].nunique()),
         "pct_of_monthly_target"  : pct,
         "monthly_target_rm"      : monthly_target,
+    }
+
+
+# ──────────────────────────────────────────────────────────────
+# Monthly efficiency analysis
+# ──────────────────────────────────────────────────────────────
+
+def compute_monthly_efficiency(
+    monthly_data: dict[str, dict],
+) -> pd.DataFrame:
+    """
+    Build a month-by-month efficiency DataFrame.
+
+    Parameters
+    ----------
+    monthly_data : dict
+        Keys are month labels e.g. "Jan 2026".
+        Values are dicts with:
+            pipe_rm      : float  — total pipe installed that month
+            active_days  : int    — working days with activity
+            avg_manpower : float  — average daily manpower (Day shift)
+            excav_rm     : float  — total excavation that month
+
+    Returns
+    -------
+    pd.DataFrame
+        Month | Pipe_rm | Active_Days | Avg_Manpower | Excav_rm |
+        RM_per_Person_Day | Efficiency_Change_Pct | Trend
+    """
+    if not monthly_data:
+        return pd.DataFrame()
+
+    rows = []
+    for month_label, d in monthly_data.items():
+        pipe_rm     = d.get("pipe_rm", 0.0)
+        active_days = d.get("active_days", 0)
+        avg_mp      = d.get("avg_manpower", 0.0)
+        excav_rm    = d.get("excav_rm", 0.0)
+
+        # Core efficiency metric: rm of pipe installed per person per working day
+        if active_days > 0 and avg_mp > 0:
+            rm_per_person_day = round(pipe_rm / (avg_mp * active_days), 4)
+        else:
+            rm_per_person_day = 0.0
+
+        rows.append({
+            "Month"            : month_label,
+            "Pipe_rm"          : pipe_rm,
+            "Active_Days"      : active_days,
+            "Avg_Manpower"     : round(avg_mp, 1),
+            "Excav_rm"         : excav_rm,
+            "RM_per_Person_Day": rm_per_person_day,
+        })
+
+    df = pd.DataFrame(rows)
+
+    # Calculate month-over-month efficiency change
+    df["Efficiency_Change_Pct"] = df["RM_per_Person_Day"].pct_change() * 100
+    df["Pipe_Change_Pct"]       = df["Pipe_rm"].pct_change() * 100
+    df["Manpower_Change_Pct"]   = df["Avg_Manpower"].pct_change() * 100
+
+    # Trend label
+    def _trend(chg):
+        if pd.isna(chg):
+            return "—"
+        if chg > 5:
+            return "Improved"
+        if chg < -5:
+            return "Declined"
+        return "Stable"
+
+    df["Efficiency_Trend"] = df["Efficiency_Change_Pct"].apply(_trend)
+    return df
+
+
+def compute_contract_projection(
+    pipe_upto_feb: float,
+    pipe_this_month: float,
+    contract_total: float,
+    months_of_data: int,
+    contract_start: pd.Timestamp,
+) -> dict[str, Any]:
+    """
+    Project how long it will take to complete the contract at current pace.
+
+    Parameters
+    ----------
+    pipe_upto_feb      : Cumulative pipe installed before current month
+    pipe_this_month    : Pipe installed in the current (most recent) month
+    contract_total     : Full contract scope in rm
+    months_of_data     : How many months of data we have (e.g. 3 for Jan+Feb+Mar)
+    contract_start     : When the project started
+
+    Returns
+    -------
+    dict with:
+        avg_monthly_rate_rm   : average rm per month so far
+        projected_finish_date : pd.Timestamp
+        months_remaining      : float
+        total_installed       : float
+        remaining_rm          : float
+        on_track              : bool
+    """
+    total_installed = pipe_upto_feb + pipe_this_month
+    remaining_rm    = max(contract_total - total_installed, 0)
+
+    # Average monthly rate across all months with data
+    avg_monthly_rate = total_installed / months_of_data if months_of_data > 0 else 0
+
+    if avg_monthly_rate > 0:
+        months_remaining = remaining_rm / avg_monthly_rate
+        from dateutil.relativedelta import relativedelta
+        projected_finish = pd.Timestamp.now() + relativedelta(months=int(months_remaining),
+                                                               days=int((months_remaining % 1) * 30))
+    else:
+        months_remaining = float("inf")
+        projected_finish = pd.NaT
+
+    return {
+        "avg_monthly_rate_rm"  : round(avg_monthly_rate, 1),
+        "projected_finish_date": projected_finish,
+        "months_remaining"     : round(months_remaining, 1),
+        "total_installed"      : total_installed,
+        "remaining_rm"         : remaining_rm,
+        "on_track"             : months_remaining <= 24,  # assume ~2yr contract
     }
