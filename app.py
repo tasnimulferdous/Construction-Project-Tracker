@@ -35,7 +35,7 @@ html, body, [class*="css"] {
     background-color: #0B0D14;
     color: #D1D5E8;
 }
-.block-container { padding: 1.5rem 2rem 2rem 2rem; }
+.block-container { padding: 3rem 2rem 2rem 2rem; }
 
 .kpi-card {
     background: linear-gradient(135deg, rgba(0,229,255,0.06), rgba(0,0,0,0));
