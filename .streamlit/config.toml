@@ -1,5 +1,13 @@
-[server]
-headless = true
+[theme]
+base                     = "dark"
+backgroundColor          = "#0B0D14"
+secondaryBackgroundColor = "#0F1120"
+primaryColor             = "#00E5FF"
+textColor                = "#D1D5E8"
+font                     = "sans serif"
 
 [client]
 showSidebarNavigation = false
+
+[server]
+headless = true
